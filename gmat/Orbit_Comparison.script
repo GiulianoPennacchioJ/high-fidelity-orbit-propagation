@@ -1,0 +1,94 @@
+%-----------------------------------------------------------------------
+% PROJECT: High-Fidelity Orbit Propagation Analysis
+% AUTHOR: Giuliano Pennacchio
+%-----------------------------------------------------------------------
+
+Create Spacecraft Sat;
+Sat.DateFormat = UTCGregorian;
+Sat.Epoch = '01 Jan 2024 12:00:00.000';
+Sat.CoordinateSystem = EarthMJ2000Eq;
+Sat.DisplayStateType = Keplerian;
+Sat.SMA = 7078.14;
+Sat.ECC = 0.001;
+Sat.INC = 98.22;
+Sat.RAAN = 0;
+Sat.AOP = 0;
+Sat.TA = 0;
+Sat.DryMass = 20;
+Sat.DragArea = 0.1;
+Sat.SRPArea = 0.1;
+Sat.Cd = 2.2;
+Sat.Cr = 1.8;
+
+% --- Force Models ---
+Create ForceModel FM_TwoBody;
+FM_TwoBody.CentralBody = Earth;
+FM_TwoBody.PrimaryBodies = {Earth};
+FM_TwoBody.GravityField.Earth.Degree = 0;
+FM_TwoBody.GravityField.Earth.Order = 0;
+
+Create ForceModel FM_J2;
+FM_J2.CentralBody = Earth;
+FM_J2.PrimaryBodies = {Earth};
+FM_J2.GravityField.Earth.Degree = 2;
+FM_J2.GravityField.Earth.Order = 0;
+
+Create ForceModel FM_HighFid;
+FM_HighFid.CentralBody = Earth;
+FM_HighFid.PrimaryBodies = {Earth};
+FM_HighFid.GravityField.Earth.Degree = 20;
+FM_HighFid.GravityField.Earth.Order = 20;
+FM_HighFid.Drag.AtmosphereModel = Exponential;
+FM_HighFid.SRP = On;
+FM_HighFid.PointMasses = {Sun, Luna}; 
+
+% --- Propagators ---
+Create Propagator Prop_TwoBody;
+Prop_TwoBody.FM = FM_TwoBody;
+Prop_TwoBody.Type = RungeKutta89;
+
+Create Propagator Prop_J2;
+Prop_J2.FM = FM_J2;
+Prop_J2.Type = RungeKutta89;
+
+Create Propagator Prop_HighFid;
+Prop_HighFid.FM = FM_HighFid;
+Prop_HighFid.Type = PrinceDormand78;
+
+% --- Reports ---
+Create ReportFile Rep_TwoBody Rep_J2 Rep_HighFid;
+
+% Impostazioni per garantire la creazione dei file
+Rep_TwoBody.Filename = 'prop_twobody.csv';
+Rep_TwoBody.WriteHeaders = On;
+Rep_TwoBody.Add = {Sat.A1ModJulian, Sat.SMA, Sat.INC, Sat.RAAN, Sat.X, Sat.Y, Sat.Z};
+
+Rep_J2.Filename = 'prop_j2.csv';
+Rep_J2.WriteHeaders = On;
+Rep_J2.Add = {Sat.A1ModJulian, Sat.SMA, Sat.INC, Sat.RAAN, Sat.X, Sat.Y, Sat.Z};
+
+Rep_HighFid.Filename = 'prop_highfid.csv';
+Rep_HighFid.WriteHeaders = On;
+Rep_HighFid.Add = {Sat.A1ModJulian, Sat.SMA, Sat.INC, Sat.RAAN, Sat.X, Sat.Y, Sat.Z};
+
+% --- Mission Sequence ---
+BeginMissionSequence;
+
+% 1. RUN TWO-BODY
+Propagate Prop_TwoBody(Sat) {Sat.ElapsedDays = 30.0};
+
+% 2. RESET SAT & RUN J2
+Sat.Epoch = '01 Jan 2024 12:00:00.000';
+Sat.SMA = 7078.14;
+Sat.ECC = 0.001;
+Sat.INC = 98.22;
+Sat.RAAN = 0;
+Propagate Prop_J2(Sat) {Sat.ElapsedDays = 30.0};
+
+% 3. RESET SAT & RUN HIGH-FID
+Sat.Epoch = '01 Jan 2024 12:00:00.000';
+Sat.SMA = 7078.14;
+Sat.ECC = 0.001;
+Sat.INC = 98.22;
+Sat.RAAN = 0;
+Propagate Prop_HighFid(Sat) {Sat.ElapsedDays = 30.0};
