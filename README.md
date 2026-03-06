@@ -51,7 +51,7 @@ This analysis distinguishes between **Osculating** and **Mean** elements:
 *Zooming into the first days reveals the high-frequency periodicity of SMA. These are not errors but real physical responses to the Earth's mass distribution.*
 
 ### 4. Inclination Stability & Third-Body Effects
-![Inclination](results/inclination_perturbations.png)
+![Inclination](results/inclination_perturbation.png)
 The inclination drift (from 98.22° to ~98.30°) is primarily driven by the Sun and Moon.
 
 #### *Technical Zoom: Lunar Perturbation Signature*
