@@ -85,7 +85,6 @@ Rep_HighFid.Add = {Sat.A1ModJulian, Sat.SMA, Sat.INC, Sat.RAAN, Sat.X, Sat.Y, Sa
 Rep_HighFid.WriteHeaders = On;
 
 % --- Mission Sequence ---
-
 BeginMissionSequence;
 
 % 1. RUN TWO-BODY
@@ -94,22 +93,26 @@ Toggle Rep_J2 Off;
 Toggle Rep_HighFid Off;
 Propagate Prop_TwoBody(Sat) {Sat.ElapsedDays = 30.0};
 
-% 2. RESET STATE & RUN J2
+% 2. RESET STATE (FULL RESET)
 Sat.Epoch = '01 Jan 2024 12:00:00.000';
 Sat.SMA = 7078.14;
-Sat.ECC = 0.001;
+Sat.ECC = 0.001;   
 Sat.INC = 98.22;
 Sat.RAAN = 0;
+Sat.AOP = 0;       
+Sat.TA = 0;       
 Toggle Rep_TwoBody Off;
 Toggle Rep_J2 On;
 Propagate Prop_J2(Sat) {Sat.ElapsedDays = 30.0};
 
-% 3. RESET STATE & RUN HIGH-FID
+% 3. RESET STATE (FULL RESET)
 Sat.Epoch = '01 Jan 2024 12:00:00.000';
 Sat.SMA = 7078.14;
-Sat.ECC = 0.001;
+Sat.ECC = 0.001;   
 Sat.INC = 98.22;
 Sat.RAAN = 0;
+Sat.AOP = 0;       
+Sat.TA = 0;        
 Toggle Rep_J2 Off;
 Toggle Rep_HighFid On;
 Propagate Prop_HighFid(Sat) {Sat.ElapsedDays = 30.0};

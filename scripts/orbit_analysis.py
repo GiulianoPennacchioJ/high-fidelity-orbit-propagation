@@ -1,8 +1,8 @@
 """
 Orbit Propagation Analysis Script
 Author: Giuliano Pennacchio
-Description: This script processes GMAT output data to compare Two-Body, 
-             J2-only, and High-Fidelity propagation models for a LEO satellite.
+Description: Processes GMAT output data to compare Two-Body, J2-only, 
+             and High-Fidelity propagation models after full state reset.
 """
 
 import pandas as pd
@@ -17,63 +17,78 @@ RESULTS_DIR = '../results/'
 if not os.path.exists(RESULTS_DIR):
     os.makedirs(RESULTS_DIR)
 
-# --- Data Loading ---
-# Using sep='\s+' to handle GMAT's fixed-width space-separated format
+def load_and_clean_data(filename):
+    """Loads GMAT fixed-width files using regex separator for compatibility."""
+    path = os.path.join(DATA_DIR, filename)
+    # Using raw string regex for whitespace and python engine to avoid warnings
+    df = pd.read_csv(path, sep=r'\s+', engine='python')
+    # Strip whitespaces from column headers
+    df.columns = [c.strip() for c in df.columns]
+    return df
+
 # --- Data Loading ---
 try:
-    # Adding 'r' prefix (raw string) to fix the SyntaxWarning for regex
-    df_2b = pd.read_csv(os.path.join(DATA_DIR, 'prop_twobody.csv'), sep=r'\s+')
-    df_j2 = pd.read_csv(os.path.join(DATA_DIR, 'prop_j2.csv'), sep=r'\s+')
-    df_hf = pd.read_csv(os.path.join(DATA_DIR, 'prop_highfid.csv'), sep=r'\s+')
-    print("[-] Data loaded successfully.")
+    df_2b = load_and_clean_data('prop_twobody.csv')
+    df_j2 = load_and_clean_data('prop_j2.csv')
+    df_hf = load_and_clean_data('prop_highfid.csv')
+    print("[-] Data synchronized and loaded successfully.")
 except Exception as e:
     print(f"[!] Error loading data: {e}")
     exit()
 
-# Cleanup column names (removing potential whitespaces from GMAT headers)
-for df in [df_2b, df_j2, df_hf]:
-    df.columns = df.columns.str.strip()
+# --- 1. Data Synchronization ---
+# Trim dataframes to the same length to allow direct vector subtraction
+min_len = min(len(df_2b), len(df_j2), len(df_hf))
+df_2b = df_2b.iloc[:min_len].reset_index(drop=True)
+df_j2 = df_j2.iloc[:min_len].reset_index(drop=True)
+df_hf = df_hf.iloc[:min_len].reset_index(drop=True)
 
-# Calculate relative time in days (assuming MJ2000 or A1ModJulian)
+# Define time axis in days
 time_days = df_hf['Sat.A1ModJulian'] - df_hf['Sat.A1ModJulian'].iloc[0]
 
-# --- 1. Position Divergence (3D Position Error) ---
-def get_3d_error(df_test, df_ref):
-    """Calculates the Euclidean distance between two position vectors."""
-    return np.sqrt((df_test['Sat.X'] - df_ref['Sat.X'])**2 + 
-                   (df_test['Sat.Y'] - df_ref['Sat.Y'])**2 + 
-                   (df_test['Sat.Z'] - df_ref['Sat.Z'])**2)
+# --- 2. Propagator Divergence (Position Error Calculation) ---
+def get_3d_position_error(df_test, df_ref):
+    """Calculates Euclidean distance between synchronized position vectors."""
+    dx = df_test['Sat.X'] - df_ref['Sat.X']
+    dy = df_test['Sat.Y'] - df_ref['Sat.Y']
+    dz = df_test['Sat.Z'] - df_ref['Sat.Z']
+    # Adding 1e-9 to allow log-scale plotting of zero/near-zero values
+    return np.sqrt(dx**2 + dy**2 + dz**2) + 1e-9
 
-error_2b_vs_hf = get_3d_error(df_2b, df_hf)
-error_j2_vs_hf = get_3d_error(df_j2, df_hf)
+error_2b_vs_hf = get_3d_position_error(df_2b, df_hf)
+error_j2_vs_hf = get_3d_position_error(df_j2, df_hf)
 
 plt.figure(figsize=(10, 6))
-plt.plot(time_days, error_2b_vs_hf, label='Two-Body vs High-Fid', color='tab:red', linestyle='--', alpha=0.8)
+plt.plot(time_days, error_2b_vs_hf, label='Two-Body vs High-Fid', color='tab:red', linestyle='--', alpha=0.7)
 plt.plot(time_days, error_j2_vs_hf, label='J2-only vs High-Fid', color='tab:blue', linewidth=2)
 plt.yscale('log')
 plt.title('Propagator Divergence: 3D Position Error (30 Days)', fontsize=14)
 plt.xlabel('Time [Days]', fontsize=12)
 plt.ylabel('Position Error [km]', fontsize=12)
-plt.grid(True, which="both", ls="-", alpha=0.4)
+plt.grid(True, which="both", ls="-", alpha=0.3)
 plt.legend()
 plt.tight_layout()
-plt.savefig(os.path.join(RESULTS_DIR, 'position_error_log.png'), dpi=300)
+plt.savefig(os.path.join(RESULTS_DIR, 'position_error_divergence.png'), dpi=300)
 
-# --- 2. Orbital Decay (Semi-Major Axis) ---
+# --- 3. Orbit Decay (SMA Secular Trend) ---
+# Rolling mean over 1 orbital period (~95 rows for 60s step) to filter J2 oscillations
+df_hf['SMA_Mean'] = df_hf['Sat.SMA'].rolling(window=95, center=True).mean()
+
 plt.figure(figsize=(10, 6))
-plt.plot(time_days, df_hf['Sat.SMA'], label='High-Fid (Drag Included)', color='tab:green', linewidth=2)
-plt.plot(time_days, df_2b['Sat.SMA'], label='Two-Body (No Drag)', color='tab:gray', linestyle=':')
+plt.plot(time_days, df_hf['Sat.SMA'], color='tab:green', alpha=0.2, label='Osculating SMA (High-Fid)')
+plt.plot(time_days, df_hf['SMA_Mean'], color='darkgreen', linewidth=2, label='Mean SMA (Atmospheric Drag Effect)')
+plt.axhline(y=df_2b['Sat.SMA'].iloc[0], color='tab:gray', linestyle=':', label='Two-Body (Baseline)')
 plt.title('Orbit Decay: Semi-Major Axis (SMA) Evolution', fontsize=14)
 plt.xlabel('Time [Days]', fontsize=12)
 plt.ylabel('SMA [km]', fontsize=12)
 plt.grid(True, alpha=0.3)
 plt.legend()
 plt.tight_layout()
-plt.savefig(os.path.join(RESULTS_DIR, 'sma_decay.png'), dpi=300)
+plt.savefig(os.path.join(RESULTS_DIR, 'sma_secular_decay.png'), dpi=300)
 
-# --- 3. RAAN Precession (J2 Effect) ---
+# --- 4. Nodal Precession (RAAN Drift) ---
 plt.figure(figsize=(10, 6))
-plt.plot(time_days, df_hf['Sat.RAAN'], label='High-Fid Precession', color='tab:purple', linewidth=2)
+plt.plot(time_days, df_hf['Sat.RAAN'], label='High-Fidelity (J2 Precession)', color='tab:purple', linewidth=2)
 plt.plot(time_days, df_2b['Sat.RAAN'], label='Two-Body (Fixed Plane)', color='tab:gray', linestyle=':')
 plt.title('Nodal Precession: RAAN Drift over Time', fontsize=14)
 plt.xlabel('Time [Days]', fontsize=12)
@@ -83,11 +98,11 @@ plt.legend()
 plt.tight_layout()
 plt.savefig(os.path.join(RESULTS_DIR, 'raan_drift.png'), dpi=300)
 
-# --- 4. Inclination Stability (Third-Body Effects) ---
+# --- 5. Inclination Stability ---
 plt.figure(figsize=(10, 6))
-plt.plot(time_days, df_hf['Sat.INC'], label='High-Fid (Sun/Moon/J2)', color='tab:orange', linewidth=2)
-plt.axhline(y=98.22, color='tab:gray', linestyle=':', label='Initial Inclination')
-plt.title('Inclination Stability & Perturbations', fontsize=14)
+plt.plot(time_days, df_hf['Sat.INC'], label='High-Fidelity (Third-Body Perturbations)', color='tab:orange', linewidth=1.5)
+plt.axhline(y=98.22, color='tab:gray', linestyle=':', label='Target Inclination')
+plt.title('Inclination Stability: Third-Body & J2 Effects', fontsize=14)
 plt.xlabel('Time [Days]', fontsize=12)
 plt.ylabel('Inclination [deg]', fontsize=12)
 plt.grid(True, alpha=0.3)
@@ -96,4 +111,4 @@ plt.tight_layout()
 plt.savefig(os.path.join(RESULTS_DIR, 'inclination_stability.png'), dpi=300)
 
 plt.show()
-print(f"[-] Analysis completed. Plots saved in {RESULTS_DIR}")
+print(f"[-] Analysis completed. Results saved in {RESULTS_DIR}")
