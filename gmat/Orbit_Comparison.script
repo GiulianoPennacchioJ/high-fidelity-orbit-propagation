@@ -1,7 +1,9 @@
 %-----------------------------------------------------------------------
-% PROJECT: High-Fidelity Orbit Propagation Analysis
+% PROJECT: High-Fidelity Orbit Propagation Analysis (Fixed Step)
 % AUTHOR: Giuliano Pennacchio
 %-----------------------------------------------------------------------
+
+% --- Resources ---
 
 Create Spacecraft Sat;
 Sat.DateFormat = UTCGregorian;
@@ -21,6 +23,7 @@ Sat.Cd = 2.2;
 Sat.Cr = 1.8;
 
 % --- Force Models ---
+
 Create ForceModel FM_TwoBody;
 FM_TwoBody.CentralBody = Earth;
 FM_TwoBody.PrimaryBodies = {Earth};
@@ -42,53 +45,71 @@ FM_HighFid.Drag.AtmosphereModel = Exponential;
 FM_HighFid.SRP = On;
 FM_HighFid.PointMasses = {Sun, Luna}; 
 
-% --- Propagators ---
+% --- Propagators (Fixed 60s Step) ---
+
 Create Propagator Prop_TwoBody;
 Prop_TwoBody.FM = FM_TwoBody;
 Prop_TwoBody.Type = RungeKutta89;
+Prop_TwoBody.InitialStepSize = 60;
+Prop_TwoBody.MinStep = 60;
+Prop_TwoBody.MaxStep = 60;
 
 Create Propagator Prop_J2;
 Prop_J2.FM = FM_J2;
 Prop_J2.Type = RungeKutta89;
+Prop_J2.InitialStepSize = 60;
+Prop_J2.MinStep = 60;
+Prop_J2.MaxStep = 60;
 
 Create Propagator Prop_HighFid;
 Prop_HighFid.FM = FM_HighFid;
-Prop_HighFid.Type = PrinceDormand78;
+Prop_HighFid.Type = RungeKutta89;
+Prop_HighFid.InitialStepSize = 60;
+Prop_HighFid.MinStep = 60;
+Prop_HighFid.MaxStep = 60;
 
 % --- Reports ---
+
 Create ReportFile Rep_TwoBody Rep_J2 Rep_HighFid;
 
-% Impostazioni per garantire la creazione dei file
 Rep_TwoBody.Filename = 'prop_twobody.csv';
-Rep_TwoBody.WriteHeaders = On;
 Rep_TwoBody.Add = {Sat.A1ModJulian, Sat.SMA, Sat.INC, Sat.RAAN, Sat.X, Sat.Y, Sat.Z};
+Rep_TwoBody.WriteHeaders = On;
 
 Rep_J2.Filename = 'prop_j2.csv';
-Rep_J2.WriteHeaders = On;
 Rep_J2.Add = {Sat.A1ModJulian, Sat.SMA, Sat.INC, Sat.RAAN, Sat.X, Sat.Y, Sat.Z};
+Rep_J2.WriteHeaders = On;
 
 Rep_HighFid.Filename = 'prop_highfid.csv';
-Rep_HighFid.WriteHeaders = On;
 Rep_HighFid.Add = {Sat.A1ModJulian, Sat.SMA, Sat.INC, Sat.RAAN, Sat.X, Sat.Y, Sat.Z};
+Rep_HighFid.WriteHeaders = On;
 
 % --- Mission Sequence ---
+
 BeginMissionSequence;
 
 % 1. RUN TWO-BODY
+Toggle Rep_TwoBody On;
+Toggle Rep_J2 Off;
+Toggle Rep_HighFid Off;
 Propagate Prop_TwoBody(Sat) {Sat.ElapsedDays = 30.0};
 
-% 2. RESET SAT & RUN J2
+% 2. RESET STATE & RUN J2
 Sat.Epoch = '01 Jan 2024 12:00:00.000';
 Sat.SMA = 7078.14;
 Sat.ECC = 0.001;
 Sat.INC = 98.22;
 Sat.RAAN = 0;
+Toggle Rep_TwoBody Off;
+Toggle Rep_J2 On;
 Propagate Prop_J2(Sat) {Sat.ElapsedDays = 30.0};
 
-% 3. RESET SAT & RUN HIGH-FID
+% 3. RESET STATE & RUN HIGH-FID
 Sat.Epoch = '01 Jan 2024 12:00:00.000';
 Sat.SMA = 7078.14;
 Sat.ECC = 0.001;
 Sat.INC = 98.22;
 Sat.RAAN = 0;
+Toggle Rep_J2 Off;
+Toggle Rep_HighFid On;
 Propagate Prop_HighFid(Sat) {Sat.ElapsedDays = 30.0};
