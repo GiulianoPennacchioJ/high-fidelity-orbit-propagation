@@ -47,7 +47,7 @@ This analysis distinguishes between **Osculating** and **Mean** elements:
 *   **Mean SMA (Dark Green):** By applying a rolling mean filter (95-minute window), the secular energy evolution is revealed. The offset from the Two-Body baseline (~8 km) represents the perturbed potential energy shift.
 
 #### *Technical Zoom: J2-Induced Oscillations*
-![SMA Zoom](results/sma_decay_zoom.png)
+![SMA Zoom](results/sma_secular_decay_zoom.png)
 *Zooming into the first days reveals the high-frequency periodicity of SMA. These are not errors but real physical responses to the Earth's mass distribution.*
 
 ### 4. Inclination Stability & Third-Body Effects
@@ -55,7 +55,7 @@ This analysis distinguishes between **Osculating** and **Mean** elements:
 The inclination drift (from 98.22° to ~98.30°) is primarily driven by the Sun and Moon.
 
 #### *Technical Zoom: Lunar Perturbation Signature*
-![Inclination Zoom](results/inclination_zoom.png)
+![Inclination Zoom](results/inclination_perturbation_zoom.png)
 *The zoom showcases a "beating" pattern in the inclination. The long-period waves represent the signature of **Lunar gravitational torque**, which modulates the orbital plane orientation over the 28-day lunar cycle.*
 
 ---
@@ -72,7 +72,7 @@ The inclination drift (from 98.22° to ~98.30°) is primarily driven by the Sun 
 ├── data/      # Synchronized CSV output files
 ├── results/   # Generated PNG plots and zooms
 └── README.md
-
+```
 ---
 
 ## Author
