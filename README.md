@@ -56,7 +56,7 @@ The inclination drift (from 98.22° to ~98.30°) is primarily driven by the Sun 
 
 #### *Technical Zoom: Lunar Perturbation Signature*
 ![Inclination Zoom](results/inclination_perturbation_zoom.png)
-*The zoom showcases a "beating" pattern in the inclination. The long-period waves represent the signature of **Lunar gravitational torque**, which modulates the orbital plane orientation over the 28-day lunar cycle.*
+*The zoom reveals a multi-frequency beating pattern. The high-frequency oscillations (~98 min period) are short-period inclination variations driven by J2. Their amplitude is modulated on a ~1-day timescale by the Sun's gravitational torque — a diurnal third-body signature. The true lunar perturbation (period ~27.3 days) manifests as the slow secular drift visible in the full 30-day plot, not in this zoom window.*
 
 ---
 
