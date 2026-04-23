@@ -44,7 +44,7 @@ To maintain Sun-Synchronicity, the orbital plane must rotate ~0.985°/day. The H
 ![SMA Secular Decay](results/sma_secular_decay.png)
 This analysis distinguishes between **Osculating** and **Mean** elements:
 *   **Osculating SMA (Light Green):** Shows the rapid $\pm 8$ km fluctuations caused by the non-spherical gravity field during each orbit.
-*   **Mean SMA (Dark Green):** By applying a rolling mean filter (95-minute window), the secular energy evolution is revealed. The offset from the Two-Body baseline (~8 km) represents the perturbed potential energy shift.
+*   **Mean SMA (Dark Green):** The rolling mean filter (1 orbital period ≈ 95 min) separates short-period oscillations from the secular trend. The ~9 km offset between the Two-Body baseline and the mean HF SMA is a structural artifact of osculating vs. mean elements: in the presence of J2 and higher harmonics, osculating elements oscillate around their mean counterparts, and the time-average of the osculating SMA converges below the Keplerian value — this is not dissipated energy. The true secular decay from atmospheric drag is ~−1.8 m/day (≈ −53 m over 30 days), physically consistent with a 20 kg CubeSat at 700 km under low solar activity — subdominant at this timescale but non-negligible for long-term mission planning.
 
 #### *Technical Zoom: J2-Induced Oscillations*
 ![SMA Zoom](results/sma_secular_decay_zoom.png)
